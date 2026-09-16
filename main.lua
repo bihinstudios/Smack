@@ -11,9 +11,9 @@ local onlineStatus = ""
 local localPlayerNum = 1
 local roomCodeInput = ""
 
--- !! CHANGE THIS to your Render.com server URL after deploying !!
-local SERVER_HOST = "localhost"
-local SERVER_PORT = 8080
+-- !! Your Render.com server URL !!
+local SERVER_HOST = "smack-fm1p.onrender.com"
+local SERVER_PORT = 443
 
 ---------------------------------------------------------------
 -- CONSTANTS

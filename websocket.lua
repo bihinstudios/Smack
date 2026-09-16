@@ -1,9 +1,13 @@
 -- websocket.lua
--- Minimal WebSocket client for LÖVE2D using luasocket
+-- Minimal WebSocket client for LÖVE2D using luasocket + luasec
 -- Implements RFC 6455 (WebSocket Protocol)
 
 local socket = require("socket")
 local mime   = require("mime")  -- for base64
+
+-- Try to load luasec for TLS support
+local ssl
+pcall(function() ssl = require("ssl") end)
 
 local WS = {}
 WS.__index = WS
@@ -33,7 +37,6 @@ end
 -- @param host  string  e.g. "my-server.onrender.com"
 -- @param port  number  e.g. 443 or 80
 -- @param path  string  e.g. "/"
--- @param useTLS boolean (not supported in plain luasocket; ignored for now)
 function WS:connect(host, port, path)
     path = path or "/"
     self.tcp = socket.tcp()
@@ -43,6 +46,32 @@ function WS:connect(host, port, path)
     if not ok then
         if self.onError then self.onError("connect failed: " .. tostring(err)) end
         return false
+    end
+
+    -- Wrap with TLS if connecting on port 443
+    if port == 443 then
+        if not ssl then
+            if self.onError then self.onError("TLS required but luasec not available") end
+            return false
+        end
+        local params = {
+            mode = "client",
+            protocol = "any",
+            verify = "none",
+            options = "all",
+        }
+        local wrapped, err2 = ssl.wrap(self.tcp, params)
+        if not wrapped then
+            if self.onError then self.onError("TLS wrap failed: " .. tostring(err2)) end
+            return false
+        end
+        wrapped:settimeout(5)
+        local sOk, sErr = wrapped:dohandshake()
+        if not sOk then
+            if self.onError then self.onError("TLS handshake failed: " .. tostring(sErr)) end
+            return false
+        end
+        self.tcp = wrapped
     end
 
     -- Send the WebSocket upgrade request
@@ -205,7 +234,7 @@ end
 function WS:_handleClose(reason)
     self.connected = false
     if self.tcp then
-        self.tcp:close()
+        pcall(function() self.tcp:close() end)
         self.tcp = nil
     end
     if self.onClose then self.onClose(reason) end
