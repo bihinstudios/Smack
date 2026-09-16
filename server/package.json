@@ -1,0 +1,16 @@
+{
+  "name": "smack-server",
+  "version": "1.0.0",
+  "description": "Smack Fighting Game - Multiplayer WebSocket Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "ws": "^8.21.3"
+  }
+}
