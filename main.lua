@@ -940,6 +940,14 @@ end
 ---------------------------------------------------------------
 local function drawMenuScreen()
     drawBackgroundEnvironment()
+
+    -- Reflected Background
+    love.graphics.push()
+    love.graphics.translate(0, Ground.getRiverY() * 2)
+    love.graphics.scale(1, -1)
+    drawBackgroundEnvironment()
+    love.graphics.pop()
+
     Ground.draw()
 
     -- Characters posing
@@ -947,11 +955,11 @@ local function drawMenuScreen()
     local menuP2X = SCREEN_W / 2 + 60
     
     Ground.drawReflection(function(ox, oy)
-        player1:draw(0, 0, SCALE)
+        player1:draw(0, 0, SCALE, true)
     end, menuP1X, Ground.getGroundY(menuP1X) - CHAR_H, player1.facingRight)
     
     Ground.drawReflection(function(ox, oy)
-        player2:draw(0, 0, SCALE)
+        player2:draw(0, 0, SCALE, true)
     end, menuP2X, Ground.getGroundY(menuP2X) - CHAR_H, player2.facingRight)
 
     player1:draw(menuP1X, Ground.getGroundY(menuP1X) - CHAR_H, SCALE)
@@ -1112,15 +1120,23 @@ end
 ---------------------------------------------------------------
 local function drawGameScene()
     drawBackgroundEnvironment()
+
+    -- Reflected Background
+    love.graphics.push()
+    love.graphics.translate(0, Ground.getRiverY() * 2)
+    love.graphics.scale(1, -1)
+    drawBackgroundEnvironment()
+    love.graphics.pop()
+
     Ground.draw()
 
-    -- Vague River Reflections
+    -- Vague River Reflections (Shadows)
     Ground.drawReflection(function(ox, oy)
-        player1:draw(0, 0, SCALE)
+        player1:draw(0, 0, SCALE, true)
     end, p1X, p1Y, player1.facingRight)
     
     Ground.drawReflection(function(ox, oy)
-        player2:draw(0, 0, SCALE)
+        player2:draw(0, 0, SCALE, true)
     end, p2X, p2Y, player2.facingRight)
 
     player1:draw(p1X, p1Y, SCALE)

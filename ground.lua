@@ -3,7 +3,7 @@ local ground = {}
 
 local VW, VH = 900, 600
 local riverY = 460       -- Base height of the riverbank (ground starts at riverY - 20 = 440)
-local slopeTilt = 50     -- Downward slope drop across screen width (Left to Right)
+local slopeTilt = 0      -- Straight ground (Left to Right)
 
 local dirtPebbles = {}
 local grassTufts = {}
@@ -37,6 +37,11 @@ end
 function ground.getGroundY(x)
     local normX = math.max(0, math.min(VW, x))
     return (riverY - 20) + (normX / VW) * slopeTilt
+end
+
+-- Helper: Returns the river level Y
+function ground.getRiverY()
+    return riverY + 16
 end
 
 -- Render Soil, Grass, and River Surface
@@ -105,29 +110,38 @@ function ground.draw(t)
     }
 
     -- Deep Dark Water Base
-    love.graphics.setColor(0.06, 0.18, 0.30, 0.92)
+    love.graphics.setColor(0.06, 0.18, 0.30, 0.5)
     love.graphics.polygon("fill", waterPoly)
 
-    -- Flowing Specular Waves (Horizontal Streaks)
-    for yOffset = 0, VH - waterStartY, 7 do
+    -- Flowing Specular Waves (Wavy Lines)
+    for yOffset = 0, VH - waterStartY, 10 do
         local lineY = waterStartY + yOffset
-        local waveSpeed = (15 - yOffset * 0.2) * 12
-        local waveShift = (t * waveSpeed) % 65
+        local waveSpeed = (15 - yOffset * 0.2) * 5
+        local waveShift = (t * waveSpeed) % 90
 
         love.graphics.setColor(0.35, 0.70, 0.90, 0.28 - (yOffset / (VH - waterStartY)) * 0.20)
+        love.graphics.setLineWidth(1.5)
 
-        for x = -60 + waveShift, VW + 60, 48 do
-            local currentY = lineY + (x / VW) * slopeTilt + math.sin(t * 4 + x * 0.05) * 1.2
-            if currentY >= waterStartY then
-                love.graphics.rectangle("fill", x, currentY, 22, 1.5)
+        for x = -60 + waveShift, VW + 60, 90 do
+            local points = {}
+            for px = 0, 40, 5 do
+                local currentX = x + px
+                local currentY = lineY + math.sin(t * 2 + currentX * 0.05) * 2.5
+                if currentY >= waterStartY then
+                    table.insert(points, currentX)
+                    table.insert(points, currentY)
+                end
+            end
+            if #points >= 4 then
+                love.graphics.line(points)
             end
         end
     end
 
-    -- Shore Water Foam Trim
+    -- Shore Water Foam Trim (Wavy)
     love.graphics.setColor(0.75, 0.90, 0.98, 0.45)
     for x = 0, VW, 3 do
-        local foamY = waterStartY + (x / VW) * slopeTilt + math.sin(t * 6 + x * 0.25) * 1.2
+        local foamY = waterStartY + math.sin(t * 3 + x * 0.1) * 2
         love.graphics.rectangle("fill", x, foamY, 2, 1)
     end
 end

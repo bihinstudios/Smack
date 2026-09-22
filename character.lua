@@ -581,7 +581,7 @@ function Character:takeHit(damage, knockbackDir, knockbackForce)
     end
 end
 
-function Character:draw(posX, posY, scale)
+function Character:draw(posX, posY, scale, isShadow)
     scale = scale or 4
     local anim = self.animations[self.currentAnim]
     if not anim then return end
@@ -607,17 +607,21 @@ function Character:draw(posX, posY, scale)
             if colorIdx > 0 then
                 local color = self.palette[colorIdx]
                 if color then
-                    -- Flash white on hit
-                    if self.flashTimer > 0 then
-                        local flash = self.flashTimer / 0.15
-                        love.graphics.setColor(
-                            color[1] + (1 - color[1]) * flash,
-                            color[2] + (1 - color[2]) * flash,
-                            color[3] + (1 - color[3]) * flash,
-                            1
-                        )
+                    if isShadow then
+                        love.graphics.setColor(0.05, 0.1, 0.15, 0.7)
                     else
-                        love.graphics.setColor(color[1], color[2], color[3], 1)
+                        -- Flash white on hit
+                        if self.flashTimer > 0 then
+                            local flash = self.flashTimer / 0.15
+                            love.graphics.setColor(
+                                color[1] + (1 - color[1]) * flash,
+                                color[2] + (1 - color[2]) * flash,
+                                color[3] + (1 - color[3]) * flash,
+                                1
+                            )
+                        else
+                            love.graphics.setColor(color[1], color[2], color[3], 1)
+                        end
                     end
                     love.graphics.rectangle("fill", (c - 1) * scale, (r - 1) * scale, scale, scale)
                 end
