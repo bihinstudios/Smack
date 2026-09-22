@@ -772,12 +772,13 @@ local function drawBackgroundEnvironment()
     local screenH = SCREEN_H
     local centerX = screenW / 2
 
-    -- Night Sky Gradient (Deep Navy to Violet)
+    -- Night Sky Gradient (Deep Navy → Violet → blends into soil)
     local skyTop = {0.05, 0.03, 0.12}
     local skyMid = {0.12, 0.06, 0.20}
-    local skyBot = {0.22, 0.10, 0.28}
+    local skyBot = {0.24, 0.15, 0.10}  -- matches soil color for seamless blend
     
-    for y = 0, screenH do
+    local groundY = 440  -- where soil starts
+    for y = 0, groundY do
         local r, g, b
         if y < 220 then
             local t = y / 220
@@ -785,7 +786,7 @@ local function drawBackgroundEnvironment()
             g = skyTop[2] + (skyMid[2] - skyTop[2]) * t
             b = skyTop[3] + (skyMid[3] - skyTop[3]) * t
         else
-            local t = (y - 220) / (screenH - 220)
+            local t = (y - 220) / (groundY - 220)
             r = skyMid[1] + (skyBot[1] - skyMid[1]) * t
             g = skyMid[2] + (skyBot[2] - skyMid[2]) * t
             b = skyMid[3] + (skyBot[3] - skyMid[3]) * t
