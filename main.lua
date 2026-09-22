@@ -73,6 +73,30 @@ local selectedPlayerPalette = 1
 local optionsNinjas = {}
 
 ---------------------------------------------------------------
+-- CAMERA & TIME-SCALE SYSTEM
+---------------------------------------------------------------
+local Camera = {
+    x = SCREEN_W / 2,
+    y = SCREEN_H / 2,
+    zoom = 1.0,
+    targetZoom = 1.0,
+    targetX = SCREEN_W / 2,
+    targetY = SCREEN_H / 2,
+    lerpSpeed = 6,
+    shakeTimer = 0,
+    shakeIntensity = 0
+}
+local TimeScale = 1.0
+local isKOSequence = false
+local koSequenceTimer = 0
+local hitFreezeTimer = 0
+local bgDesaturation = 0
+local bgDesatTarget = 0
+local koLoser = nil
+local koLoserX = 0
+local koLoserY = 0
+
+---------------------------------------------------------------
 -- MENU / PAUSE SELECTION
 ---------------------------------------------------------------
 local menuItems    = {"1P VS AI", "2P LOCAL", "2P ONLINE", "OPTIONS", "CREDITS", "HOW TO PLAY", "QUIT"}
@@ -114,6 +138,23 @@ local function resetRound()
 
     particles    = Particles.new()
     aiController = AI.new()
+
+    -- Reset camera & time
+    Camera.zoom = 1.0
+    Camera.targetZoom = 1.0
+    Camera.x = SCREEN_W / 2
+    Camera.y = SCREEN_H / 2
+    Camera.targetX = SCREEN_W / 2
+    Camera.targetY = SCREEN_H / 2
+    Camera.shakeTimer = 0
+    Camera.shakeIntensity = 0
+    TimeScale = 1.0
+    isKOSequence = false
+    koSequenceTimer = 0
+    hitFreezeTimer = 0
+    bgDesaturation = 0
+    bgDesatTarget = 0
+    koLoser = nil
 end
 
 ---------------------------------------------------------------
@@ -185,6 +226,42 @@ local function processHit(attacker, defender, atkX, defX, atkFacingRight)
 
     if defender.isDizzy then
         particles:spawnDizzy(defX + 30, groundLevel - CHAR_H - 12)
+    end
+
+    -- ======== COMBO ZOOM: Slow-mo on combo hits ========
+    local isCombo = (attacker.currentAnim == "punch_combo" or attacker.currentAnim == "kick_combo")
+    if isCombo and not isKOSequence then
+        TimeScale = 0.2
+        Camera.targetZoom = 1.5
+        Camera.targetX = hitX
+        Camera.targetY = hitY
+        Camera.shakeTimer = 0.15
+        Camera.shakeIntensity = 6
+        hitFreezeTimer = 0.04  -- 2-3 frame freeze on contact
+    end
+
+    -- ======== FATAL HIT: K.O. death sequence ========
+    if defender.chakra <= 0 and not isKOSequence then
+        isKOSequence = true
+        koSequenceTimer = 0
+        hitFreezeTimer = 0.08  -- Longer freeze on the killing blow
+        TimeScale = 0.1        -- Heavy slow motion
+        Camera.targetZoom = 2.2
+        Camera.targetX = defX + 36
+        Camera.targetY = groundLevel - CHAR_H / 2 - 8
+        Camera.shakeTimer = 0.3
+        Camera.shakeIntensity = 10
+        bgDesatTarget = 0.4
+        koLoser = defender
+        koLoserX = defX
+        koLoserY = groundLevel - CHAR_H
+
+        -- Override KO anim with slow_death
+        defender.isStunned = false
+        defender.isDizzy = false
+        defender.currentAnim = "slow_death"
+        defender.frameIdx = 1
+        defender.timer = 0
     end
 end
 
@@ -268,8 +345,74 @@ function love.update(dt)
     end
 
     dt = math.min(dt, 1 / 30)
-    cloudTimer = cloudTimer + dt * 15
-    Grass.update(dt)
+
+    -- Hit freeze: pause everything for a few frames on big impacts
+    if hitFreezeTimer > 0 then
+        hitFreezeTimer = hitFreezeTimer - dt
+        return  -- Freeze ALL updates
+    end
+
+    -- Apply time scale
+    local realDt = dt
+    local scaledDt = dt * TimeScale
+
+    -- Camera smooth interpolation (always runs at real time)
+    Camera.zoom = Camera.zoom + (Camera.targetZoom - Camera.zoom) * Camera.lerpSpeed * realDt
+    Camera.x = Camera.x + (Camera.targetX - Camera.x) * Camera.lerpSpeed * realDt
+    Camera.y = Camera.y + (Camera.targetY - Camera.y) * Camera.lerpSpeed * realDt
+    if Camera.shakeTimer > 0 then
+        Camera.shakeTimer = Camera.shakeTimer - realDt
+    end
+
+    -- Background desaturation lerp
+    bgDesaturation = bgDesaturation + (bgDesatTarget - bgDesaturation) * 4 * realDt
+
+    -- KO sequence management
+    if isKOSequence then
+        koSequenceTimer = koSequenceTimer + realDt
+
+        -- Combo zoom reset (non-KO) is handled per-hit; for KO:
+        -- After the slow_death animation completes (~1.8s), freeze frame
+        if koLoser and koLoser.currentAnim == "slow_death" then
+            local anim = Character.animations["slow_death"]
+            if koLoser.frameIdx >= #anim.frames then
+                TimeScale = 0.0  -- Total freeze on final dead pose
+            end
+        end
+
+        -- Transition to round_over after 3 seconds real time
+        if koSequenceTimer >= 3.0 then
+            if player1.chakra <= 0 then
+                p2Wins = p2Wins + 1
+            elseif player2.chakra <= 0 then
+                p1Wins = p1Wins + 1
+            end
+            gameState = "round_over"
+            stateTimer = 2.5
+            -- Reset camera for the overlay
+            Camera.targetZoom = 1.0
+            Camera.targetX = SCREEN_W / 2
+            Camera.targetY = SCREEN_H / 2
+            TimeScale = 1.0
+            bgDesatTarget = 0
+            isKOSequence = false
+            koLoser = nil
+        end
+    else
+        -- Reset combo zoom back to normal after a short delay
+        if TimeScale < 1.0 and not isKOSequence then
+            TimeScale = TimeScale + realDt * 4  -- Ramp back up over ~0.25s
+            if TimeScale >= 1.0 then
+                TimeScale = 1.0
+                Camera.targetZoom = 1.0
+                Camera.targetX = SCREEN_W / 2
+                Camera.targetY = SCREEN_H / 2
+            end
+        end
+    end
+
+    cloudTimer = cloudTimer + scaledDt * 15
+    Grass.update(scaledDt)
 
     if gameState == "intro" then
         Intro.update(dt)
@@ -287,14 +430,14 @@ function love.update(dt)
     end
 
     if gameState == "round_intro" then
-        stateTimer = stateTimer - dt
+        stateTimer = stateTimer - realDt
         if stateTimer <= 0 then gameState = "playing" end
         return
     end
 
     if gameState == "round_over" then
-        stateTimer = stateTimer - dt
-        particles:update(dt)
+        stateTimer = stateTimer - realDt
+        particles:update(scaledDt)
         if stateTimer <= 0 then
             if p1Wins >= ROUND_WIN_NEED or p2Wins >= ROUND_WIN_NEED then
                 gameState   = "match_over"
@@ -311,8 +454,8 @@ function love.update(dt)
     end
 
     if gameState == "match_over" then
-        stateTimer = stateTimer - dt
-        particles:update(dt)
+        stateTimer = stateTimer - realDt
+        particles:update(scaledDt)
         return
     end
 
@@ -470,15 +613,17 @@ function love.update(dt)
     end
 
     -- ---- Tick characters & particles ----
-    player1:update(dt)
-    player2:update(dt)
-    particles:update(dt)
+    player1:update(scaledDt)
+    player2:update(scaledDt)
+    particles:update(scaledDt)
 
-    -- ---- Round end ----
-    if player1.chakra <= 0 then
-        p2Wins = p2Wins + 1;  gameState = "round_over";  stateTimer = 2.5
-    elseif player2.chakra <= 0 then
-        p1Wins = p1Wins + 1;  gameState = "round_over";  stateTimer = 2.5
+    -- ---- Round end (only if not in KO sequence) ----
+    if not isKOSequence then
+        if player1.chakra <= 0 then
+            p2Wins = p2Wins + 1;  gameState = "round_over";  stateTimer = 2.5
+        elseif player2.chakra <= 0 then
+            p1Wins = p1Wins + 1;  gameState = "round_over";  stateTimer = 2.5
+        end
     end
 end
 
@@ -1124,6 +1269,19 @@ end
 -- GAME SCENE (shared by playing / paused / round_over / match_over)
 ---------------------------------------------------------------
 local function drawGameScene()
+    -- ======== CAMERA TRANSFORM ========
+    local shakeX, shakeY = 0, 0
+    if Camera.shakeTimer > 0 then
+        shakeX = (math.random() - 0.5) * 2 * Camera.shakeIntensity
+        shakeY = (math.random() - 0.5) * 2 * Camera.shakeIntensity
+    end
+
+    love.graphics.push()
+    -- Translate so camera center is at screen center, then zoom
+    love.graphics.translate(SCREEN_W / 2 + shakeX, SCREEN_H / 2 + shakeY)
+    love.graphics.scale(Camera.zoom, Camera.zoom)
+    love.graphics.translate(-Camera.x, -Camera.y)
+
     drawBackgroundEnvironment()
 
     -- Reflected Background
@@ -1149,6 +1307,15 @@ local function drawGameScene()
     player1:draw(p1X, p1Y, SCALE)
     player2:draw(p2X, p2Y, SCALE)
     particles:draw()
+
+    love.graphics.pop() -- End camera transform
+
+    -- ======== BACKGROUND DESATURATION OVERLAY ========
+    if bgDesaturation > 0.01 then
+        love.graphics.setColor(0, 0, 0.02, bgDesaturation)
+        love.graphics.rectangle("fill", 0, 0, SCREEN_W, SCREEN_H)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
 end
 
 local function drawHUD()
