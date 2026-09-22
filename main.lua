@@ -21,7 +21,6 @@ local SERVER_PORT = 443
 local SCREEN_W     = 900
 local SCREEN_H     = 600
 local SCALE        = 4
-local GROUND_Y     = 440
 local CHAR_H       = 18 * SCALE
 local GRAVITY      = 1000
 local JUMP_IMPULSE = -400
@@ -99,11 +98,13 @@ local aiController
 -- HELPER: reset for a new round
 ---------------------------------------------------------------
 local function resetRound()
-    p1X, p1Y  = 180, GROUND_Y - CHAR_H
+    p1X = 180
+    p1Y = Ground.getGroundY(p1X) - CHAR_H
     p1VelY    = 0
     p1Grounded = true
 
-    p2X, p2Y  = SCREEN_W - 250, GROUND_Y - CHAR_H
+    p2X = SCREEN_W - 250
+    p2Y = Ground.getGroundY(p2X) - CHAR_H
     p2VelY    = 0
     p2Grounded = true
 
@@ -168,7 +169,8 @@ local function processHit(attacker, defender, atkX, defX, atkFacingRight)
 
     -- Particles at impact point
     local hitX = (atkX + defX) / 2
-    local hitY = GROUND_Y - CHAR_H / 2 - 10
+    local groundLevel = Ground.getGroundY(defX)
+    local hitY = groundLevel - CHAR_H / 2 - 10
 
     if atkData.particle == "small" then
         particles:spawnSmallHit(hitX, hitY, knockDir)
@@ -179,7 +181,7 @@ local function processHit(attacker, defender, atkX, defX, atkFacingRight)
     end
 
     if defender.isDizzy then
-        particles:spawnDizzy(defX + 30, GROUND_Y - CHAR_H - 12)
+        particles:spawnDizzy(defX + 30, groundLevel - CHAR_H - 12)
     end
 end
 
@@ -369,24 +371,30 @@ function love.update(dt)
     if not p1Grounded then
         p1VelY = p1VelY + GRAVITY * dt
         p1Y    = p1Y + p1VelY * dt
-        if p1Y >= GROUND_Y - CHAR_H then
-            p1Y = GROUND_Y - CHAR_H;  p1VelY = 0;  p1Grounded = true
+        local p1GroundY = Ground.getGroundY(p1X)
+        if p1Y >= p1GroundY - CHAR_H then
+            p1Y = p1GroundY - CHAR_H;  p1VelY = 0;  p1Grounded = true
             if player1.currentAnim == "jump" or player1.currentAnim == "jump_punch" then
                 player1:setAnimation("idle")
             end
         end
+    else
+        p1Y = Ground.getGroundY(p1X) - CHAR_H
     end
 
     -- ---- P2 gravity ----
     if not p2Grounded then
         p2VelY = p2VelY + GRAVITY * dt
         p2Y    = p2Y + p2VelY * dt
-        if p2Y >= GROUND_Y - CHAR_H then
-            p2Y = GROUND_Y - CHAR_H;  p2VelY = 0;  p2Grounded = true
+        local p2GroundY = Ground.getGroundY(p2X)
+        if p2Y >= p2GroundY - CHAR_H then
+            p2Y = p2GroundY - CHAR_H;  p2VelY = 0;  p2Grounded = true
             if player2.currentAnim == "jump" or player2.currentAnim == "jump_punch" then
                 player2:setAnimation("idle")
             end
         end
+    else
+        p2Y = Ground.getGroundY(p2X) - CHAR_H
     end
 
     -- ---- AI or Player 2 (Local) ----
@@ -822,8 +830,8 @@ local function drawBackgroundEnvironment()
     drawCloudBand(340, 250, {0.20, 0.12, 0.28}, 40)
 
     -- Oriental Pine Trees Framing Left & Right Sides
-    drawPineTree(40, GROUND_Y, false)
-    drawPineTree(screenW - 40, GROUND_Y, true)
+    drawPineTree(40, Ground.getGroundY(40), false)
+    drawPineTree(screenW - 40, Ground.getGroundY(screenW - 40), true)
 end
 
 local function drawDarkOverlay(alpha)
@@ -932,11 +940,22 @@ end
 ---------------------------------------------------------------
 local function drawMenuScreen()
     drawBackgroundEnvironment()
-    Ground:draw(SCREEN_W, GROUND_Y, SCALE)
+    Ground.draw()
 
     -- Characters posing
-    player1:draw(SCREEN_W / 2 - 140, GROUND_Y - CHAR_H, SCALE)
-    player2:draw(SCREEN_W / 2 + 60,  GROUND_Y - CHAR_H, SCALE)
+    local menuP1X = SCREEN_W / 2 - 140
+    local menuP2X = SCREEN_W / 2 + 60
+    
+    Ground.drawReflection(function(ox, oy)
+        player1:draw(0, 0, SCALE)
+    end, menuP1X, Ground.getGroundY(menuP1X) - CHAR_H, player1.facingRight)
+    
+    Ground.drawReflection(function(ox, oy)
+        player2:draw(0, 0, SCALE)
+    end, menuP2X, Ground.getGroundY(menuP2X) - CHAR_H, player2.facingRight)
+
+    player1:draw(menuP1X, Ground.getGroundY(menuP1X) - CHAR_H, SCALE)
+    player2:draw(menuP2X, Ground.getGroundY(menuP2X) - CHAR_H, SCALE)
 
     drawDarkOverlay(0.55)
 
@@ -1093,7 +1112,17 @@ end
 ---------------------------------------------------------------
 local function drawGameScene()
     drawBackgroundEnvironment()
-    Ground:draw(SCREEN_W, GROUND_Y, SCALE)
+    Ground.draw()
+
+    -- Vague River Reflections
+    Ground.drawReflection(function(ox, oy)
+        player1:draw(0, 0, SCALE)
+    end, p1X, p1Y, player1.facingRight)
+    
+    Ground.drawReflection(function(ox, oy)
+        player2:draw(0, 0, SCALE)
+    end, p2X, p2Y, player2.facingRight)
+
     player1:draw(p1X, p1Y, SCALE)
     player2:draw(p2X, p2Y, SCALE)
     particles:draw()

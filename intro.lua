@@ -7,8 +7,13 @@ local markCanvas
 local t = 0
 local shake = 0
 local Character = require("character")
+local fallAnim = require("fall_animation")
 local introNinja
 local victimNinja
+
+-- Track previous Y to calculate velocity
+local ninjaYLast = 240 - 36
+local ninjaVy = 0
 
 -- Visual FX & Particles
 local sparks = {}
@@ -171,21 +176,22 @@ function intro.load()
     slashTriggered = false
     titleScale = 0
     isIntroDone = false
+    ninjaYLast = VH - 36
+    ninjaVy = 0
+    
+    fallAnim.load()
     
     introNinja = Character:new(2, false)
     introNinja.palette = {}
     for k, v in pairs(Character.paletteP2) do
         introNinja.palette[k] = {v[1], v[2], v[3]}
     end
-    -- Brighten outline so it's visible on the black background
-    introNinja.palette[1] = {0.3, 0.15, 0.18}
 
     victimNinja = Character:new(1, false)
     victimNinja.palette = {}
     for k, v in pairs(Character.paletteP1) do
         victimNinja.palette[k] = {v[1], v[2], v[3]}
     end
-    victimNinja.palette[1] = {0.2, 0.25, 0.3}
 end
 
 function intro.setVictimPalette(idx)
@@ -194,8 +200,6 @@ function intro.setVictimPalette(idx)
     for k, v in pairs(basePalette) do
         victimNinja.palette[k] = {v[1], v[2], v[3]}
     end
-    -- Keep the brighter outline for visibility against black
-    victimNinja.palette[1] = {0.2, 0.25, 0.3}
 end
 
 function intro.update(dt)
@@ -233,6 +237,31 @@ function intro.update(dt)
         introNinja:update(dt)
         victimNinja:update(dt)
     end
+
+    -- Calculate ninja position & velocity for fallAnim
+    local groundY = VH - 36
+    local centerX = VW / 2
+    local currentNinjaY = groundY
+    local currentNinjaX = centerX
+    local isGrounded = true
+
+    if t < tEntranceStart then
+        currentNinjaY = -50
+        isGrounded = false
+    elseif t < tArriveCenter then
+        local p = (t - tEntranceStart) / (tArriveCenter - tEntranceStart)
+        currentNinjaY = -20 + p * (groundY + 20)
+        isGrounded = false
+    end
+
+    if dt > 0 then
+        ninjaVy = (currentNinjaY - ninjaYLast) / dt
+    else
+        ninjaVy = 0
+    end
+    ninjaYLast = currentNinjaY
+
+    fallAnim.update(dt, ninjaVy, isGrounded, currentNinjaX, currentNinjaY)
 end
 
 function intro.isFinished()
@@ -269,6 +298,9 @@ function intro.draw()
         ninjaX = centerX
         ninjaY = -20 + p * (groundY + 20)
         sx, sy = 0.8, 1.4
+
+        -- Use fall animation instead of default sprite logic
+        pose = "falling"
 
     elseif t < tDialogue1 then
         ninjaX, ninjaY = centerX, groundY
@@ -357,7 +389,13 @@ function intro.draw()
 
     -- Draw Ninja Character
     if t >= tEntranceStart and t < tSplatImpact + 0.1 then
-        drawNinjaSprite(ninjaX, ninjaY, sx, sy, pose)
+        if pose == "falling" or (t >= tArriveCenter and t < tArriveCenter + 0.5) then
+            -- Let fallAnim draw during the fall and shortly after for landing squash and dust
+            local isGrounded = (t >= tArriveCenter)
+            fallAnim.draw(ninjaX, ninjaY, ninjaVy, isGrounded, true, t, introNinja)
+        else
+            drawNinjaSprite(ninjaX, ninjaY, sx, sy, pose)
+        end
     end
 
     -- Speech Bubbles
