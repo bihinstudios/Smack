@@ -1,5 +1,6 @@
 local Character = require("character")
 local Ground    = require("ground")
+local Grass     = require("grass")
 local Particles = require("particles")
 local AI        = require("ai")
 local PF        = require("pixelfont")
@@ -121,6 +122,8 @@ end
 function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
     math.randomseed(os.time())
+    Ground.load()
+    Grass.load()
     resetRound()
     Intro.load()
     
@@ -266,6 +269,7 @@ function love.update(dt)
 
     dt = math.min(dt, 1 / 30)
     cloudTimer = cloudTimer + dt * 15
+    Grass.update(dt)
 
     if gameState == "intro" then
         Intro.update(dt)
@@ -946,6 +950,7 @@ local function drawMenuScreen()
     love.graphics.pop()
 
     Ground.draw()
+    Grass.draw()
 
     -- Characters posing
     local menuP1X = SCREEN_W / 2 - 140
@@ -1125,6 +1130,7 @@ local function drawGameScene()
     love.graphics.pop()
 
     Ground.draw()
+    Grass.draw()
 
     -- Vague River Reflections (Shadows)
     Ground.drawReflection(function(ox, oy)

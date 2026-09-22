@@ -78,25 +78,7 @@ function ground.draw(t)
         end
     end
 
-    ---------------------------------------------------------
-    -- 2. GRASS EDGE (Sloped & Animated Sway)
-    ---------------------------------------------------------
-    -- Dark Base Rim
-    love.graphics.setColor(0.1, 0.4, 0.3)
-    for _, g in ipairs(grassTufts) do
-        love.graphics.rectangle("fill", g.x - 1, g.y - g.height, 3, g.height + 4)
-    end
-
-    -- Vibrant Top Grass Tufts (Night color)
-    love.graphics.setColor(0.2, 0.7, 0.5)
-    for _, g in ipairs(grassTufts) do
-        local sway = math.sin(t * 3.5 + g.x * 0.1) * 1.5
-        love.graphics.polygon("fill",
-            g.x - 2, g.y + 1,
-            g.x + 2, g.y + 1,
-            g.x + sway, g.y - g.height
-        )
-    end
+    -- (Grass is now rendered by grass.lua module)
 
     ---------------------------------------------------------
     -- 3. FLOWING RIVER
