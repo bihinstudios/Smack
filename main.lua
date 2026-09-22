@@ -829,8 +829,10 @@ local function drawBackgroundEnvironment()
     drawCloudBand(220, 180, {0.32, 0.18, 0.40}, 26)
     drawCloudBand(280, 90, {0.40, 0.25, 0.45}, 32)
     drawCloudBand(340, 250, {0.20, 0.12, 0.28}, 40)
+end
 
-    -- Oriental Pine Trees Framing Left & Right Sides
+local function drawTrees()
+    local screenW = SCREEN_W
     drawPineTree(40, Ground.getGroundY(40), false)
     drawPineTree(screenW - 40, Ground.getGroundY(screenW - 40), true)
 end
@@ -951,6 +953,7 @@ local function drawMenuScreen()
 
     Ground.draw()
     Grass.draw()
+    drawTrees()
 
     -- Characters posing
     local menuP1X = SCREEN_W / 2 - 140
@@ -1131,6 +1134,7 @@ local function drawGameScene()
 
     Ground.draw()
     Grass.draw()
+    drawTrees()
 
     -- Vague River Reflections (Shadows)
     Ground.drawReflection(function(ox, oy)
