@@ -82,13 +82,13 @@ function ground.draw(t)
     -- 2. GRASS EDGE (Sloped & Animated Sway)
     ---------------------------------------------------------
     -- Dark Base Rim
-    love.graphics.setColor(0.05, 0.15, 0.10)
+    love.graphics.setColor(0.1, 0.4, 0.3)
     for _, g in ipairs(grassTufts) do
         love.graphics.rectangle("fill", g.x - 1, g.y - g.height, 3, g.height + 4)
     end
 
     -- Vibrant Top Grass Tufts (Night color)
-    love.graphics.setColor(0.10, 0.30, 0.20)
+    love.graphics.setColor(0.2, 0.7, 0.5)
     for _, g in ipairs(grassTufts) do
         local sway = math.sin(t * 3.5 + g.x * 0.1) * 1.5
         love.graphics.polygon("fill",

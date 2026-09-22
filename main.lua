@@ -617,7 +617,6 @@ function love.keypressed(key)
             elseif key == "r" then player1:setAnimation("uppercut")
             elseif key == "t" then player1:setAnimation("lowercut")
             elseif key == "v" then player1:setAnimation("low_kick")
-            elseif key == "b" then player1:setAnimation("high_kick")
             elseif key == "z" then player1:setAnimation("punch_combo")
             elseif key == "x" then player1:setAnimation("kick_combo")
             elseif key == "h" and not p1Grounded then player1:setAnimation("jump_punch")
@@ -639,7 +638,6 @@ function love.keypressed(key)
                 elseif key == "r" then player2:setAnimation("uppercut")
                 elseif key == "t" then player2:setAnimation("lowercut")
                 elseif key == "v" then player2:setAnimation("low_kick")
-                elseif key == "b" then player2:setAnimation("high_kick")
                 elseif key == "z" then player2:setAnimation("punch_combo")
                 elseif key == "x" then player2:setAnimation("kick_combo")
                 elseif key == "h" and not p2Grounded then player2:setAnimation("jump_punch")
@@ -650,7 +648,6 @@ function love.keypressed(key)
                 elseif key == "i" then player2:setAnimation("uppercut")
                 elseif key == "o" then player2:setAnimation("lowercut")
                 elseif key == "m" then player2:setAnimation("low_kick")
-                elseif key == "," then player2:setAnimation("high_kick")
                 elseif key == "n" then player2:setAnimation("punch_combo")
                 elseif key == "." then player2:setAnimation("kick_combo")
                 elseif key == "l" and not p2Grounded then player2:setAnimation("jump_punch")
@@ -1095,7 +1092,6 @@ local function drawHowToPlayScreen()
         {"R", "UPPERCUT"},
         {"T", "LOWERCUT"},
         {"V", "LOW KICK"},
-        {"B", "HIGH KICK"},
         {"C", "PUNCH COMBO"},
         {"X", "KICK COMBO"},
         {"H", "JUMP PUNCH"},
