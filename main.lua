@@ -161,6 +161,7 @@ end
 -- LOVE CALLBACKS
 ---------------------------------------------------------------
 function love.load()
+    Character.loadAssets()
     love.graphics.setDefaultFilter("nearest", "nearest")
     math.randomseed(os.time())
     Ground.load()
@@ -210,6 +211,8 @@ local function processHit(attacker, defender, atkX, defX, atkFacingRight)
     end
 
     defender:takeHit(damage, knockDir, atkData.knockback)
+    attacker.damageDealt = attacker.damageDealt + damage
+    attacker.damageDealt = attacker.damageDealt + damage
 
     -- Particles at impact point
     local hitX = (atkX + defX) / 2
@@ -229,7 +232,7 @@ local function processHit(attacker, defender, atkX, defX, atkFacingRight)
     end
 
     -- ======== COMBO ZOOM: Slow-mo on combo hits ========
-    local isCombo = (attacker.currentAnim == "punch_combo" or attacker.currentAnim == "kick_combo")
+    local isCombo = (attacker.currentAnim == "slash" or attacker.currentAnim == "fireball")
     if isCombo and not isKOSequence then
         TimeScale = 0.2
         Camera.targetZoom = 1.5
@@ -613,8 +616,18 @@ function love.update(dt)
     end
 
     -- ---- Tick characters & particles ----
-    player1:update(scaledDt)
-    player2:update(scaledDt)
+    local oldAnimP1 = player1.currentAnim
+        player1:update(scaledDt)
+        if player1.currentAnim ~= oldAnimP1 and (player1.currentAnim == "slash" or player1.currentAnim == "thrust" or player1.currentAnim == "fireball") then
+            local y = Ground.getGroundY(player1X) - 40
+            particles:spawnWindSlash(player1X, y, player1.facingRight and 1 or -1)
+        end
+    local oldAnimP2 = player2.currentAnim
+        player2:update(scaledDt)
+        if player2.currentAnim ~= oldAnimP2 and (player2.currentAnim == "slash" or player2.currentAnim == "thrust" or player2.currentAnim == "fireball") then
+            local y = Ground.getGroundY(player2X) - 40
+            particles:spawnWindSlash(player2X, y, player2.facingRight and 1 or -1)
+        end
     particles:update(scaledDt)
 
     -- ---- Round end (only if not in KO sequence) ----
@@ -761,14 +774,11 @@ function love.keypressed(key)
                 p1VelY = JUMP_IMPULSE; p1Grounded = false
             end
             -- Attacks
-            if     key == "f" then player1:setAnimation("punch")
-            elseif key == "g" then player1:setAnimation("kick")
-            elseif key == "r" then player1:setAnimation("uppercut")
-            elseif key == "t" then player1:setAnimation("lowercut")
-            elseif key == "v" then player1:setAnimation("low_kick")
-            elseif key == "z" then player1:setAnimation("punch_combo")
-            elseif key == "x" then player1:setAnimation("kick_combo")
-            elseif key == "h" and not p1Grounded then player1:setAnimation("jump_punch")
+            if     key == "f" then player1:setAnimation("thrust")
+            elseif key == "g" then player1:setAnimation("slash")
+            elseif key == "z" then
+                if player1.damageDealt >= 60 then player1:setAnimation("fireball") end
+            elseif key == "h" and not p1Grounded then player1:setAnimation("slash")
             end
         end
 
@@ -782,24 +792,18 @@ function love.keypressed(key)
             
             -- If online P2, use P1 keys (WASD + FGRT), else use P2 keys (UIOJKL)
             if gameMode == "2p_online" then
-                if     key == "f" then player2:setAnimation("punch")
-                elseif key == "g" then player2:setAnimation("kick")
-                elseif key == "r" then player2:setAnimation("uppercut")
-                elseif key == "t" then player2:setAnimation("lowercut")
-                elseif key == "v" then player2:setAnimation("low_kick")
-                elseif key == "z" then player2:setAnimation("punch_combo")
-                elseif key == "x" then player2:setAnimation("kick_combo")
-                elseif key == "h" and not p2Grounded then player2:setAnimation("jump_punch")
+                if     key == "f" then player2:setAnimation("thrust")
+                elseif key == "g" then player2:setAnimation("slash")
+                elseif key == "z" then
+                    if player2.damageDealt >= 60 then player2:setAnimation("fireball") end
+                elseif key == "h" and not p2Grounded then player2:setAnimation("slash")
                 end
             else
-                if     key == "j" then player2:setAnimation("punch")
-                elseif key == "k" then player2:setAnimation("kick")
-                elseif key == "i" then player2:setAnimation("uppercut")
-                elseif key == "o" then player2:setAnimation("lowercut")
-                elseif key == "m" then player2:setAnimation("low_kick")
-                elseif key == "n" then player2:setAnimation("punch_combo")
-                elseif key == "." then player2:setAnimation("kick_combo")
-                elseif key == "l" and not p2Grounded then player2:setAnimation("jump_punch")
+                if     key == "j" then player2:setAnimation("thrust")
+                elseif key == "k" then player2:setAnimation("slash")
+                elseif key == "n" then
+                    if player2.damageDealt >= 60 then player2:setAnimation("fireball") end
+                elseif key == "l" and not p2Grounded then player2:setAnimation("slash")
                 end
             end
         end
@@ -1330,7 +1334,7 @@ local function drawHUD()
 end
 
 local function drawControlsHint()
-    PF.drawTextCentered("WASD MOVE  B/N BLOCK  F PUNCH  G KICK  ESC PAUSE",
+    PF.drawTextCentered("WASD MOVE  B/N BLOCK  F THRUST  G SLASH  Z FIREBALL",
         SCREEN_H - 22, SCREEN_W, 2, COL.hint)
 end
 

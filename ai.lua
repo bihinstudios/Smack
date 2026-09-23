@@ -12,16 +12,11 @@ function AI.new()
     return self
 end
 
--- Available attacks with weights (higher = more likely to pick)
-local attacks = {
-    { name = "punch",       weight = 5,  range = 90 },
-    { name = "kick",        weight = 4,  range = 95 },
-    { name = "uppercut",    weight = 3,  range = 85 },
-    { name = "lowercut",    weight = 3,  range = 85 },
-    { name = "low_kick",    weight = 3,  range = 95 },
-    { name = "high_kick",   weight = 2,  range = 90 },
-    { name = "punch_combo", weight = 1,  range = 80 },
-    { name = "kick_combo",  weight = 1,  range = 85 },
+-- Available attacks with base weights (higher = more likely to pick)
+local baseAttacks = {
+    { name = "thrust", weight = 5,  range = 95 },
+    { name = "slash",  weight = 4,  range = 105 },
+    { name = "fireball", weight = 0, range = 180 } -- unlocked when damageDealt >= 60
 }
 
 local function weightedRandom(list)
@@ -104,19 +99,26 @@ function AI:update(dt, aiX, aiY, aiGrounded, playerX, playerY, aiChar)
     else
         -- In attack range
         if self.attackCooldown <= 0 and math.random() < self.aggression then
+            -- Determine available attacks based on damage dealt
+            local availableAttacks = { baseAttacks[1], baseAttacks[2] }
+            if aiChar.damageDealt >= 60 then
+                table.insert(availableAttacks, { name = "fireball", weight = 6, range = 180 })
+            end
+            
             -- Pick an attack
-            local chosen = weightedRandom(attacks)
+            local chosen = weightedRandom(availableAttacks)
             attackName = chosen.name
             self.attackCooldown = 0.4 + math.random() * 0.3
             self.currentAction = "attack"
 
-            -- Sometimes jump punch
-            if not aiGrounded and math.random() < 0.3 then
-                attackName = "jump_punch"
+            -- Sometimes jump before attacking if they aren't fireballing
+            if not aiGrounded and math.random() < 0.3 and attackName ~= "fireball" then
+                -- Aerial slash
+                attackName = "slash"
             end
-            if aiGrounded and math.random() < 0.12 then
+            if aiGrounded and math.random() < 0.12 and attackName ~= "fireball" then
                 jumpRequest = true
-                attackName = "jump_punch"
+                attackName = "slash"
             end
         else
             -- Idle or slight retreat

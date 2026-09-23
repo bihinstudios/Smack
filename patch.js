@@ -12,41 +12,41 @@ for (let i = 0; i < lines.length; i++) {
             let col = row.indexOf(6);
             if (col !== -1 && row.length === 18) {
                 // Eye & Nose
-                row[col-3] = 1;
-                row[col-2] = 2;
-                row[col-1] = 4;
-                row[col]   = 6;
-                row[col+1] = 4;
-                row[col+2] = 4;
-                row[col+3] = 1;
+                row[col - 3] = 1;
+                row[col - 2] = 2;
+                row[col - 1] = 4;
+                row[col] = 6;
+                row[col + 1] = 4;
+                row[col + 2] = 4;
+                row[col + 3] = 1;
                 lines[i] = match[1] + row.join(',') + match[3];
 
                 // Hood depth
-                let aboveMatch = lines[i-1].match(/^(\s*\{)(.*?)(\},?)$/);
+                let aboveMatch = lines[i - 1].match(/^(\s*\{)(.*?)(\},?)$/);
                 if (aboveMatch) {
                     let rowA = aboveMatch[2].split(',').map(s => parseInt(s.trim()));
-                    rowA[col-3] = 1;
-                    rowA[col-2] = 2;
-                    rowA[col-1] = 5;
-                    rowA[col]   = 5;
-                    rowA[col+1] = 5;
-                    rowA[col+2] = 2;
-                    rowA[col+3] = 1;
-                    lines[i-1] = aboveMatch[1] + rowA.join(',') + aboveMatch[3];
+                    rowA[col - 3] = 1;
+                    rowA[col - 2] = 2;
+                    rowA[col - 1] = 5;
+                    rowA[col] = 5;
+                    rowA[col + 1] = 5;
+                    rowA[col + 2] = 2;
+                    rowA[col + 3] = 1;
+                    lines[i - 1] = aboveMatch[1] + rowA.join(',') + aboveMatch[3];
                 }
 
                 // Jaw
-                let belowMatch = lines[i+1].match(/^(\s*\{)(.*?)(\},?)$/);
+                let belowMatch = lines[i + 1].match(/^(\s*\{)(.*?)(\},?)$/);
                 if (belowMatch) {
                     let rowB = belowMatch[2].split(',').map(s => parseInt(s.trim()));
-                    rowB[col-3] = 1;
-                    rowB[col-2] = 1;
-                    rowB[col-1] = 5;
-                    rowB[col]   = 4;
-                    rowB[col+1] = 4;
-                    rowB[col+2] = 1;
-                    rowB[col+3] = 0;
-                    lines[i+1] = belowMatch[1] + rowB.join(',') + belowMatch[3];
+                    rowB[col - 3] = 1;
+                    rowB[col - 2] = 1;
+                    rowB[col - 1] = 5;
+                    rowB[col] = 4;
+                    rowB[col + 1] = 4;
+                    rowB[col + 2] = 1;
+                    rowB[col + 3] = 0;
+                    lines[i + 1] = belowMatch[1] + rowB.join(',') + belowMatch[3];
                 }
             }
         }

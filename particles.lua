@@ -68,6 +68,42 @@ function Particles:spawnMediumHit(x, y, direction)
 end
 
 --- Big clash burst for combos
+
+--- Dynamic wind slash for fast weapon attacks (thrust/slash)
+function Particles:spawnWindSlash(x, y, direction)
+    local dir = direction or 1
+    
+    table.insert(self.particles, {
+        x = x,
+        y = y,
+        vx = 400 * dir,
+        vy = -50 + math.random() * 100,
+        life = 0.2,
+        maxLife = 0.2,
+        size = 8,
+        color = {0.8, 0.9, 1, 0.9},
+        shape = "wind", -- Custom shape
+        gravity = 0,
+        scaleX = 1.0
+    })
+    
+    -- A few trailing wind streaks
+    for i = 1, 3 do
+        table.insert(self.particles, {
+            x = x - (20 * dir),
+            y = y + math.random(-20, 20),
+            vx = 250 * dir,
+            vy = 0,
+            life = 0.15 + math.random() * 0.1,
+            maxLife = 0.2,
+            size = 2 + math.random() * 2,
+            color = {0.6, 0.8, 1, 0.6},
+            shape = "rect",
+            gravity = 0
+        })
+    end
+end
+
 function Particles:spawnBigHit(x, y, direction)
     local dir = direction or 1
     -- huge white flash
