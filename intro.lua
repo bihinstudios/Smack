@@ -186,11 +186,6 @@ end
 function intro.setVictimPalette(idx)
     if victimNinja then victimNinja.playerType = idx end
 end
-    local basePalette = Character.palettes[idx] or Character.paletteP1
-    for k, v in pairs(basePalette) do
-        victimNinja.palette[k] = {v[1], v[2], v[3]}
-    end
-end
 
 function intro.update(dt)
     t = t + dt
