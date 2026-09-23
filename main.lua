@@ -1034,7 +1034,7 @@ local function drawChakraBar(x, y, w, h, chakra, palette, label, winsCount, isFl
     love.graphics.rectangle("fill", x - 2, y - 2, w + 4, h + 4, 4, 4)
 
     -- Border glow
-    love.graphics.setColor(palette[5][1], palette[5][2], palette[5][3], 0.6)
+    love.graphics.setColor(0.8, 0.8, 0.8, 0.6)
     love.graphics.rectangle("line", x - 2, y - 2, w + 4, h + 4, 4, 4)
 
     -- Fill
