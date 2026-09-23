@@ -144,19 +144,17 @@ local function drawNinjaSprite(x, y, scaleX, scaleY, pose)
 
     if introNinja then
         if pose == "slash" then
-            introNinja:setAnimation("jump_punch")
+            introNinja:setAnimation("slash")
         else
             introNinja:setAnimation("idle")
         end
         love.graphics.setColor(1, 1, 1, 1)
-        introNinja:draw(-8, -9, 1)
+        -- PNG uses 1.2 scale naturally, adjust Y anchor. The old pixel art drew at -8, -9.
+        -- For PNG, origin is bottom-center, so Y should be slightly lower (e.g. 0).
+        introNinja:draw(-8, 10, 1.2)
     end
 
-    -- Katana / Sword FX
-    if pose == "slash" then
-        love.graphics.setColor(1.0, 0.9, 0.3)
-        love.graphics.polygon("fill", -20, -18, 15, 8, -15, 12)
-    end
+    
 
     love.graphics.pop()
 end
@@ -182,20 +180,12 @@ function intro.load()
     fallAnim.load()
     
     introNinja = Character:new(2, false)
-    introNinja.palette = {}
-    for k, v in pairs(Character.paletteP2) do
-        introNinja.palette[k] = {v[1], v[2], v[3]}
-    end
-
     victimNinja = Character:new(1, false)
-    victimNinja.palette = {}
-    for k, v in pairs(Character.paletteP1) do
-        victimNinja.palette[k] = {v[1], v[2], v[3]}
-    end
 end
 
 function intro.setVictimPalette(idx)
-    if not victimNinja then return end
+    if victimNinja then victimNinja.playerType = idx end
+end
     local basePalette = Character.palettes[idx] or Character.paletteP1
     for k, v in pairs(basePalette) do
         victimNinja.palette[k] = {v[1], v[2], v[3]}
