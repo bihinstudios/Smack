@@ -134,8 +134,8 @@ local function resetRound()
     p2VelY    = 0
     p2Grounded = true
 
-    player1 = Character:new(1, true, selectedPlayerPalette)
-    player2 = Character:new(2, false)
+    player1 = Character:new(selectedPlayerPalette or 1, true)
+    player2 = Character:new(selectedP2Palette or 2, false)
 
     particles    = Particles.new()
     aiController = AI.new()
@@ -766,10 +766,14 @@ function love.keypressed(key)
 
     -- ==== SUB-SCREENS (back on ESC) ====
     if gameState == "options" and key == "return" then
-        player1 = Character:new(selectedPlayerPalette, true)
-        player2 = Character:new(selectedP2Palette, false)
-        if gameMode == "pve" then ai = AI.new() else ai = nil end
-        resetMatch()
+        player1 = Character:new(selectedPlayerPalette or 1, true)
+        player2 = Character:new(selectedP2Palette or 2, false)
+        p1Wins = 0
+        p2Wins = 0
+        roundNumber = 1
+        resetRound()
+        gameState = "round_intro"
+        stateTimer = 2.0
         return
     end
 
