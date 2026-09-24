@@ -70,6 +70,7 @@ local stateTimer  = 0
 local matchWinner = 0
 local cloudTimer  = 0
 local selectedPlayerPalette = 1
+local selectedP2Palette = 2
 local optionsNinjas = {}
 
 ---------------------------------------------------------------
@@ -162,6 +163,8 @@ end
 ---------------------------------------------------------------
 function love.load()
     Character.loadAssets()
+    bgImage = love.graphics.newImage("Asset/Background.png")
+    bgImage:setFilter("linear", "linear")
     love.graphics.setDefaultFilter("nearest", "nearest")
     math.randomseed(os.time())
     Ground.load()
@@ -200,11 +203,22 @@ local function checkHit(attacker, defender, atkX, defX, atkFacingRight)
 end
 
 local function processHit(attacker, defender, atkX, defX, atkFacingRight)
-    local atkData = Character.attackData[attacker.currentAnim]
+    local atkData = Character.attackData[attacker.playerType][attacker.currentAnim]
     attacker.hitRegistered = true
 
     local knockDir = atkFacingRight and 1 or -1
     
+    -- Magic Stone dodge logic
+    if attacker.currentAnim == "magic_stone" then
+        local defGrounded = (defender == player1 and p1Grounded) or (defender == player2 and p2Grounded)
+        if not defGrounded then
+            return -- Dodged by jumping!
+        end
+        -- Apply petrification
+        defender.isPetrified = true
+        defender.petrifyTimer = 2.0
+    end
+
     local damage = atkData.damage
     if defender.isBlocking then
         damage = math.floor(damage * 0.2)
@@ -568,11 +582,7 @@ function love.update(dt)
             end
 
             if attackName then
-                if attackName == "jump_punch" and not p2Grounded then
-                    player2:setAnimation("jump_punch")
-                elseif attackName ~= "jump_punch" then
-                    player2:setAnimation(attackName)
-                end
+                triggerAttack(player2, attackName)
             end
         elseif (gameMode == "2p_local" or (gameMode == "2p_online" and localPlayerNum == 2)) and not player2.isStunned and not player2.isDizzy then
             local p2Moving = false
@@ -618,15 +628,31 @@ function love.update(dt)
     -- ---- Tick characters & particles ----
     local oldAnimP1 = player1.currentAnim
         player1:update(scaledDt)
-        if player1.currentAnim ~= oldAnimP1 and (player1.currentAnim == "slash" or player1.currentAnim == "thrust" or player1.currentAnim == "fireball") then
+        if player1.currentAnim ~= oldAnimP1 then
             local y = Ground.getGroundY(player1X) - 40
-            particles:spawnWindSlash(player1X, y, player1.facingRight and 1 or -1)
+            local dir = player1.facingRight and 1 or -1
+            if player1.currentAnim == "slash" or player1.currentAnim == "thrust" or player1.currentAnim == "big_slash" or player1.currentAnim == "slash_combo" or player1.currentAnim == "leg_cut" then
+                particles:spawnWindSlash(player1X, y, dir)
+            elseif player1.currentAnim == "water_ball" then
+                -- Could spawn a blue water ball particle
+                particles:spawnWindSlash(player1X, y, dir) 
+            elseif player1.currentAnim == "beam" or player1.currentAnim == "fireball" then
+                -- Could spawn a large beam/fire particle
+                particles:spawnWindSlash(player1X, y, dir)
+            end
         end
     local oldAnimP2 = player2.currentAnim
         player2:update(scaledDt)
-        if player2.currentAnim ~= oldAnimP2 and (player2.currentAnim == "slash" or player2.currentAnim == "thrust" or player2.currentAnim == "fireball") then
+        if player2.currentAnim ~= oldAnimP2 then
             local y = Ground.getGroundY(player2X) - 40
-            particles:spawnWindSlash(player2X, y, player2.facingRight and 1 or -1)
+            local dir = player2.facingRight and 1 or -1
+            if player2.currentAnim == "slash" or player2.currentAnim == "thrust" or player2.currentAnim == "big_slash" or player2.currentAnim == "slash_combo" or player2.currentAnim == "leg_cut" then
+                particles:spawnWindSlash(player2X, y, dir)
+            elseif player2.currentAnim == "water_ball" then
+                particles:spawnWindSlash(player2X, y, dir) 
+            elseif player2.currentAnim == "beam" or player2.currentAnim == "fireball" then
+                particles:spawnWindSlash(player2X, y, dir)
+            end
         end
     particles:update(scaledDt)
 
@@ -644,18 +670,50 @@ end
 -- KEY PRESSED
 ---------------------------------------------------------------
 function love.mousepressed(x, y, button)
-    if gameState == "options" and button == 1 then
-        local startX = (SCREEN_W - (5 * 100)) / 2 + 50
-        local yPos = 300
-        for i = 1, 5 do
-            local nx = startX + (i - 1) * 100
-            if x >= nx - 32 and x <= nx + 32 and y >= yPos - 36 and y <= yPos + 36 then
-                selectedPlayerPalette = i
-                if player1 then
-                    player1.palette = Character.palettes[selectedPlayerPalette]
+    if gameState == "options" then
+        local startX = (SCREEN_W - (3 * 150)) / 2 + 75
+        local yPos = 200
+        for i = 1, 3 do
+            local nx = startX + (i - 1) * 150
+            if x >= nx - 60 and x <= nx + 60 and y >= yPos - 60 and y <= yPos + 90 then
+                if button == 1 then
+                    selectedPlayerPalette = i
+                elseif button == 2 then
+                    selectedP2Palette = i
                 end
-                Intro.setVictimPalette(selectedPlayerPalette)
             end
+        end
+    end
+end
+
+
+local function triggerAttack(player, moveType)
+    if player.isStunned or player.isPetrified or player.isDizzy then return end
+
+    local pType = player.playerType
+    local isAir = not (player == player1 and p1Grounded or player == player2 and p2Grounded)
+    
+    if pType == 1 then
+        if moveType == "light" then player:setAnimation("thrust")
+        elseif moveType == "heavy" then player:setAnimation("slash")
+        elseif moveType == "sp1" then
+            if player.damageDealt >= 60 then player:setAnimation("fireball") end
+        elseif moveType == "sp2" then
+            if isAir then player:setAnimation("slash") end
+        end
+        
+    elseif pType == 2 then
+        if moveType == "light" then player:setAnimation("punch")
+        elseif moveType == "heavy" then player:setAnimation("slash")
+        elseif moveType == "sp1" then player:setAnimation("water_ball")
+        elseif moveType == "sp2" then player:setAnimation("big_slash")
+        end
+        
+    elseif pType == 3 then
+        if moveType == "light" then player:setAnimation("stab")
+        elseif moveType == "heavy" then player:setAnimation("slash_combo")
+        elseif moveType == "sp1" then player:setAnimation("beam")
+        elseif moveType == "sp2" then player:setAnimation("magic_stone")
         end
     end
 end
@@ -704,6 +762,14 @@ function love.keypressed(key)
     end
 
     -- ==== SUB-SCREENS (back on ESC) ====
+    if gameState == "options" and key == "return" then
+        player1 = Character:new(selectedPlayerPalette, true)
+        player2 = Character:new(selectedP2Palette, false)
+        if gameMode == "pve" then ai = AI.new() else ai = nil end
+        resetMatch()
+        return
+    end
+
     if gameState == "credits" or gameState == "how_to_play" or gameState == "options" or gameState == "online_lobby" then
         if key == "escape" or (key == "backspace" and gameState ~= "online_lobby") then
             if gameState == "online_lobby" then
@@ -774,11 +840,10 @@ function love.keypressed(key)
                 p1VelY = JUMP_IMPULSE; p1Grounded = false
             end
             -- Attacks
-            if     key == "f" then player1:setAnimation("thrust")
-            elseif key == "g" then player1:setAnimation("slash")
-            elseif key == "z" then
-                if player1.damageDealt >= 60 then player1:setAnimation("fireball") end
-            elseif key == "h" and not p1Grounded then player1:setAnimation("slash")
+            if key == "f" then triggerAttack(player1, "light")
+            elseif key == "g" then triggerAttack(player1, "heavy")
+            elseif key == "z" then triggerAttack(player1, "sp1")
+            elseif key == "h" then triggerAttack(player1, "sp2")
             end
         end
 
@@ -792,18 +857,16 @@ function love.keypressed(key)
             
             -- If online P2, use P1 keys (WASD + FGRT), else use P2 keys (UIOJKL)
             if gameMode == "2p_online" then
-                if     key == "f" then player2:setAnimation("thrust")
-                elseif key == "g" then player2:setAnimation("slash")
-                elseif key == "z" then
-                    if player2.damageDealt >= 60 then player2:setAnimation("fireball") end
-                elseif key == "h" and not p2Grounded then player2:setAnimation("slash")
+                if key == "f" then triggerAttack(player2, "light")
+                elseif key == "g" then triggerAttack(player2, "heavy")
+                elseif key == "z" then triggerAttack(player2, "sp1")
+                elseif key == "h" then triggerAttack(player2, "sp2")
                 end
             else
-                if     key == "j" then player2:setAnimation("thrust")
-                elseif key == "k" then player2:setAnimation("slash")
-                elseif key == "n" then
-                    if player2.damageDealt >= 60 then player2:setAnimation("fireball") end
-                elseif key == "l" and not p2Grounded then player2:setAnimation("slash")
+                if key == "j" then triggerAttack(player2, "light")
+                elseif key == "k" then triggerAttack(player2, "heavy")
+                elseif key == "n" then triggerAttack(player2, "sp1")
+                elseif key == "l" then triggerAttack(player2, "sp2")
                 end
             end
         end
@@ -917,74 +980,13 @@ local function drawPineTree(x, y, flip)
 end
 
 local function drawBackgroundEnvironment()
-    local screenW = SCREEN_W
-    local screenH = SCREEN_H
-    local centerX = screenW / 2
-
-    -- Night Sky Gradient (Deep Navy → Violet → blends into soil)
-    local skyTop = {0.05, 0.03, 0.12}
-    local skyMid = {0.12, 0.06, 0.20}
-    local skyBot = {0.24, 0.15, 0.10}  -- matches soil color for seamless blend
-    
-    local groundY = 440  -- where soil starts
-    for y = 0, groundY do
-        local r, g, b
-        if y < 220 then
-            local t = y / 220
-            r = skyTop[1] + (skyMid[1] - skyTop[1]) * t
-            g = skyTop[2] + (skyMid[2] - skyTop[2]) * t
-            b = skyTop[3] + (skyMid[3] - skyTop[3]) * t
-        else
-            local t = (y - 220) / (groundY - 220)
-            r = skyMid[1] + (skyBot[1] - skyMid[1]) * t
-            g = skyMid[2] + (skyBot[2] - skyMid[2]) * t
-            b = skyMid[3] + (skyBot[3] - skyMid[3]) * t
-        end
-        love.graphics.setColor(r, g, b, 1)
-        love.graphics.rectangle("fill", 0, y, screenW, 1)
+    love.graphics.setColor(1, 1, 1, 1)
+    if bgImage then
+        -- Draw stretched to fill the sky area, stopping at groundY (440)
+        local sx = SCREEN_W / bgImage:getWidth()
+        local sy = 440 / bgImage:getHeight()
+        love.graphics.draw(bgImage, 0, 0, 0, sx, sy)
     end
-
-    -- Background Stars
-    love.graphics.setColor(0.9, 0.85, 1.0, 0.8)
-    local starPositions = {{80, 40}, {200, 70}, {350, 30}, {600, 50}, {720, 80}, {140, 110}, {650, 120}}
-    for _, s in ipairs(starPositions) do
-        love.graphics.rectangle("fill", s[1], s[2], 2, 2)
-    end
-
-    -- Giant Moon (Backlit)
-    love.graphics.setColor(0.85, 0.92, 1.0, 0.95)
-    love.graphics.circle("fill", centerX, 210, 110)
-    
-    -- Moon Craters / Texture
-    love.graphics.setColor(0.75, 0.82, 0.92, 0.4)
-    love.graphics.circle("fill", centerX - 40, 180, 22)
-    love.graphics.circle("fill", centerX + 30, 240, 18)
-    love.graphics.circle("fill", centerX + 10, 160, 14)
-
-    -- Central Backlit Pagoda
-    drawPagodaSilhouette(centerX, 330)
-
-    -- Drifting Japanese Pink/Violet Clouds (Opaque to prevent overlap artifacts)
-    local function drawCloudBand(y, offsetX, color, h)
-        love.graphics.setColor(color[1], color[2], color[3], 1)
-        for i = -1, 2 do
-            local x = ((cloudTimer + offsetX + (i * 400)) % (screenW + 400)) - 200
-            love.graphics.ellipse("fill", x, y, 140, h)
-            love.graphics.ellipse("fill", x + 60, y - 6, 90, h - 4)
-            love.graphics.ellipse("fill", x - 50, y + 4, 80, h - 2)
-        end
-    end
-
-    drawCloudBand(150, 0, {0.25, 0.14, 0.35}, 20)
-    drawCloudBand(220, 180, {0.32, 0.18, 0.40}, 26)
-    drawCloudBand(280, 90, {0.40, 0.25, 0.45}, 32)
-    drawCloudBand(340, 250, {0.20, 0.12, 0.28}, 40)
-end
-
-local function drawTrees()
-    local screenW = SCREEN_W
-    drawPineTree(40, Ground.getGroundY(40), false)
-    drawPineTree(screenW - 40, Ground.getGroundY(screenW - 40), true)
 end
 
 local function drawDarkOverlay(alpha)
@@ -1103,7 +1105,7 @@ local function drawMenuScreen()
 
     Ground.draw()
     Grass.draw()
-    drawTrees()
+    
 
     -- Characters posing
     local menuP1X = SCREEN_W / 2 - 140
@@ -1166,41 +1168,72 @@ local function drawOptionsScreen()
     drawBackgroundEnvironment()
     drawDarkOverlay(0.8)
 
-    PF.drawTextCentered("OPTIONS", 60, SCREEN_W, 6, COL.white)
-    PF.drawTextCentered("CHOOSE YOUR NINJA", 130, SCREEN_W, 3, COL.gold)
+    PF.drawTextCentered("CHARACTER SELECT", 30, SCREEN_W, 5, COL.gold)
 
-    local mouseX, mouseY = love.mouse.getPosition()
-    local startX = (SCREEN_W - (5 * 100)) / 2 + 50
-    local yPos = 300
+    -- Top half: 3 playable characters
+    local names = {"SHINSUKE", "DAISUKE", "ITSUKI"}
+    local startX = (SCREEN_W - (3 * 150)) / 2 + 75
+    local yPos = 200
 
-    for i = 1, 5 do
-        local x = startX + (i - 1) * 100
-        local isHovered = (mouseX >= x - 32 and mouseX <= x + 32 and mouseY >= yPos - 36 and mouseY <= yPos + 36)
-        local drawScale = 4
-        
-        if isHovered then drawScale = 4.5 end
+    for i = 1, 3 do
+        local x = startX + (i - 1) * 150
         
         if selectedPlayerPalette == i then
-            love.graphics.setColor(1, 0.8, 0, 0.3)
-            love.graphics.rectangle("fill", x - 40, yPos - 45, 80, 90)
-            love.graphics.setColor(1, 0.8, 0, 1)
-            love.graphics.rectangle("line", x - 40, yPos - 45, 80, 90)
-        elseif isHovered then
+            love.graphics.setColor(0, 1, 1, 0.4)
+            love.graphics.rectangle("fill", x - 60, yPos - 60, 60, 150)
+            love.graphics.setColor(0, 1, 1, 1)
+            love.graphics.rectangle("line", x - 60, yPos - 60, 60, 150)
+        end
+        if selectedP2Palette == i then
+            love.graphics.setColor(1, 0, 0, 0.4)
+            love.graphics.rectangle("fill", x, yPos - 60, 60, 150)
+            love.graphics.setColor(1, 0, 0, 1)
+            love.graphics.rectangle("line", x, yPos - 60, 60, 150)
+        end
+        if selectedPlayerPalette ~= i and selectedP2Palette ~= i then
             love.graphics.setColor(1, 1, 1, 0.1)
-            love.graphics.rectangle("fill", x - 40, yPos - 45, 80, 90)
+            love.graphics.rectangle("fill", x - 60, yPos - 60, 120, 150)
         end
         
         love.graphics.setColor(1, 1, 1, 1)
-        optionsNinjas[i]:draw(x - (16 * drawScale)/2, yPos - (18 * drawScale)/2, drawScale)
-        
-        if selectedPlayerPalette == i then
-            local titles = {"ORIGINAL", "PURPLE", "WHITE", "SHINOBI", "ORANGE"}
-            local titleWidth = PF.getTextWidth(titles[i], 2)
-            PF.drawText(titles[i], x - math.floor(titleWidth/2), yPos + 60, 2, COL.cyan)
+        if Character.images[i] and Character.images[i]["a"] then
+            -- Draw a sample frame (e.g., jump or idle)
+            local img = Character.images[i]["b"] or Character.images[i]["a"]
+            if img then
+                love.graphics.draw(img, x, yPos, 0, 4, 4, img:getWidth()/2, img:getHeight()/2)
+            end
         end
+        
+        PF.drawTextCentered(names[i], yPos + 100, x * 2, 2, selectedPlayerPalette == i and COL.cyan or COL.white)
     end
+    
+    PF.drawTextCentered("P1: " .. names[selectedPlayerPalette], 330, SCREEN_W/2, 2, COL.cyan)
+    PF.drawTextCentered("P2: " .. names[selectedP2Palette], 330, SCREEN_W * 1.5, 2, COL.red)
 
-    drawBlinkHint("ESC - BACK TO MENU", SCREEN_H - 40)
+    -- Bottom half: Upcoming Characters (8 items)
+    PF.drawTextCentered("UPCOMING CHARACTERS", 380, SCREEN_W, 3, COL.red)
+    
+    local ucStartX = (SCREEN_W - (4 * 100)) / 2 + 50
+    local ucY1 = 450
+    local ucY2 = 550
+    
+    love.graphics.setColor(1, 1, 1, 0.4) -- Fade them out a bit
+    for i = 1, 8 do
+        local row = (i <= 4) and 1 or 2
+        local col = (i <= 4) and i or (i - 4)
+        local bx = ucStartX + (col - 1) * 100
+        local by = (row == 1) and ucY1 or ucY2
+        
+        if Character.upcomingImages and Character.upcomingImages[i] then
+            local img = Character.upcomingImages[i]
+            love.graphics.draw(img, bx, by, 0, 2.5, 2.5, img:getWidth()/2, img:getHeight()/2)
+        end
+        
+        PF.drawTextCentered("COMING SOON", by + 40, bx * 2, 1, COL.white)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+
+    drawBlinkHint("LCLICK - P1 | RCLICK - P2 | ENTER - FIGHT | ESC - BACK", SCREEN_H - 40)
 end
 
 ---------------------------------------------------------------
@@ -1297,7 +1330,7 @@ local function drawGameScene()
 
     Ground.draw()
     Grass.draw()
-    drawTrees()
+    
 
     -- Vague River Reflections (Shadows)
     Ground.drawReflection(function(ox, oy)
@@ -1334,7 +1367,7 @@ local function drawHUD()
 end
 
 local function drawControlsHint()
-    PF.drawTextCentered("WASD MOVE  B/N BLOCK  F THRUST  G SLASH  Z FIREBALL",
+    PF.drawTextCentered("WASD MOVE  F LIGHT  G HEAVY  Z SP1  H SP2",
         SCREEN_H - 22, SCREEN_W, 2, COL.hint)
 end
 

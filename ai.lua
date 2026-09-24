@@ -13,11 +13,7 @@ function AI.new()
 end
 
 -- Available attacks with base weights (higher = more likely to pick)
-local baseAttacks = {
-    { name = "thrust", weight = 5,  range = 95 },
-    { name = "slash",  weight = 4,  range = 105 },
-    { name = "fireball", weight = 0, range = 180 } -- unlocked when damageDealt >= 60
-}
+-- Attacks are generated dynamically based on playerType inside update
 
 local function weightedRandom(list)
     local totalWeight = 0
@@ -100,9 +96,29 @@ function AI:update(dt, aiX, aiY, aiGrounded, playerX, playerY, aiChar)
         -- In attack range
         if self.attackCooldown <= 0 and math.random() < self.aggression then
             -- Determine available attacks based on damage dealt
-            local availableAttacks = { baseAttacks[1], baseAttacks[2] }
-            if aiChar.damageDealt >= 60 then
-                table.insert(availableAttacks, { name = "fireball", weight = 6, range = 180 })
+            local availableAttacks = {}
+            if aiChar.playerType == 1 then
+                availableAttacks = {
+                    { name = "light", weight = 5 },
+                    { name = "heavy", weight = 4 }
+                }
+                if aiChar.damageDealt >= 60 then
+                    table.insert(availableAttacks, { name = "sp1", weight = 6 })
+                end
+            elseif aiChar.playerType == 2 then
+                availableAttacks = {
+                    { name = "light", weight = 5 },
+                    { name = "heavy", weight = 4 },
+                    { name = "sp1", weight = 3 },
+                    { name = "sp2", weight = 4 }
+                }
+            elseif aiChar.playerType == 3 then
+                availableAttacks = {
+                    { name = "light", weight = 5 },
+                    { name = "heavy", weight = 4 },
+                    { name = "sp1", weight = 3 },
+                    { name = "sp2", weight = 4 }
+                }
             end
             
             -- Pick an attack
@@ -112,13 +128,13 @@ function AI:update(dt, aiX, aiY, aiGrounded, playerX, playerY, aiChar)
             self.currentAction = "attack"
 
             -- Sometimes jump before attacking if they aren't fireballing
-            if not aiGrounded and math.random() < 0.3 and attackName ~= "fireball" then
+            if not aiGrounded and math.random() < 0.3 and attackName ~= "sp1" then
                 -- Aerial slash
-                attackName = "slash"
+                attackName = "sp2"
             end
-            if aiGrounded and math.random() < 0.12 and attackName ~= "fireball" then
+            if aiGrounded and math.random() < 0.12 and attackName ~= "sp1" then
                 jumpRequest = true
-                attackName = "slash"
+                attackName = "sp2"
             end
         else
             -- Idle or slight retreat
