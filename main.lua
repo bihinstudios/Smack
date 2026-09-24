@@ -339,6 +339,40 @@ local function handleServerMessage(msg)
 end
 
 ---------------------------------------------------------------
+-- ATTACK DISPATCHER (character-specific move routing)
+---------------------------------------------------------------
+local function triggerAttack(player, moveType)
+    if player.isStunned or player.isPetrified or player.isDizzy then return end
+
+    local pType = player.playerType
+    local isAir = not (player == player1 and p1Grounded or player == player2 and p2Grounded)
+    
+    if pType == 1 then
+        if moveType == "light" then player:setAnimation("thrust")
+        elseif moveType == "heavy" then player:setAnimation("slash")
+        elseif moveType == "sp1" then
+            if player.damageDealt >= 60 then player:setAnimation("fireball") end
+        elseif moveType == "sp2" then
+            if isAir then player:setAnimation("slash") end
+        end
+        
+    elseif pType == 2 then
+        if moveType == "light" then player:setAnimation("punch")
+        elseif moveType == "heavy" then player:setAnimation("slash")
+        elseif moveType == "sp1" then player:setAnimation("water_ball")
+        elseif moveType == "sp2" then player:setAnimation("big_slash")
+        end
+        
+    elseif pType == 3 then
+        if moveType == "light" then player:setAnimation("stab")
+        elseif moveType == "heavy" then player:setAnimation("slash_combo")
+        elseif moveType == "sp1" then player:setAnimation("beam")
+        elseif moveType == "sp2" then player:setAnimation("magic_stone")
+        end
+    end
+end
+
+---------------------------------------------------------------
 -- UPDATE
 ---------------------------------------------------------------
 function love.update(dt)
@@ -686,37 +720,6 @@ function love.mousepressed(x, y, button)
     end
 end
 
-
-local function triggerAttack(player, moveType)
-    if player.isStunned or player.isPetrified or player.isDizzy then return end
-
-    local pType = player.playerType
-    local isAir = not (player == player1 and p1Grounded or player == player2 and p2Grounded)
-    
-    if pType == 1 then
-        if moveType == "light" then player:setAnimation("thrust")
-        elseif moveType == "heavy" then player:setAnimation("slash")
-        elseif moveType == "sp1" then
-            if player.damageDealt >= 60 then player:setAnimation("fireball") end
-        elseif moveType == "sp2" then
-            if isAir then player:setAnimation("slash") end
-        end
-        
-    elseif pType == 2 then
-        if moveType == "light" then player:setAnimation("punch")
-        elseif moveType == "heavy" then player:setAnimation("slash")
-        elseif moveType == "sp1" then player:setAnimation("water_ball")
-        elseif moveType == "sp2" then player:setAnimation("big_slash")
-        end
-        
-    elseif pType == 3 then
-        if moveType == "light" then player:setAnimation("stab")
-        elseif moveType == "heavy" then player:setAnimation("slash_combo")
-        elseif moveType == "sp1" then player:setAnimation("beam")
-        elseif moveType == "sp2" then player:setAnimation("magic_stone")
-        end
-    end
-end
 
 function love.keypressed(key)
 
