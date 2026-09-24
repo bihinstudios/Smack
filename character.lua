@@ -30,7 +30,6 @@ function Character.loadAssets()
             Character.upcomingImages[i] = img
         end
     end
-    end
 end
 
 -------------------------------------------------------------------------------
